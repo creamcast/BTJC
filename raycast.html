@@ -1,0 +1,230 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"><html lang="ja">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="GENERATOR" content="BASIC to JAVASCRIPT CONVERTOR">
+<title>My Page</title>
+<script type="text/javascript" src="lib/array.js"></script>
+<script type="text/javascript" src="lib/block.js"></script>
+<script type="text/javascript" src="lib/canvas.js"></script>
+<script type="text/javascript" src="lib/game.js"></script>
+<script type="text/javascript" src="lib/generic.js"></script>
+<script type="text/javascript" src="lib/io.js"></script>
+<script type="text/javascript" src="lib/math.js"></script>
+<script type="text/javascript" src="lib/network.js"></script>
+<script type="text/javascript" src="lib/string.js"></script>
+</head>
+<body bgcolor="#FFFFFF" text="#000000" link="#0000FF" alink="#FF0000" vlink="#800080" >
+<canvas id="view" width="800" height="700"></canvas><br>
+<div id="output"></div>
+
+</body>
+<script>
+const screen_width=800;
+const screen_height=700;
+const left=37;
+const right=39;
+const up=38;
+const down=40;
+const start=83;
+const viewwidth=192;
+const raystep=0.005;
+const slwidth=4;
+const wall=1;
+SETCANVAS("view");
+BLOCKMOVE("view",WINDOWWIDTH()/2-screen_width/2);
+global_cdiv = "output"
+game = new Object();
+var ID_GAMELOOP=null;
+INITGAME();
+ID_GAMELOOP = setInterval(GAMELOOP,16);
+function INITGAME(){
+INITKEYBOARD();
+game.colors = new Object();
+game.colors.red = RGB(255,0,0);
+game.colors.blue = RGB(0,0,255);
+game.colors.green = RGB(0,255,0);
+game.colors.black = RGB(0,0,0);
+game.colors.gray = RGB(194,194,194);
+var level=LOADLEVEL1();
+game.tile = new Array();
+var x=0;
+var y=0;
+var n=0;
+var si=1;
+var tilesize=32;
+for (var i=0; i<=ARRAYLEN(level); i=i+1){
+while(1){
+var t=MID(level[i],si,1);
+if ( t==""){
+var si=1;
+break;
+} else if ( t=="1"){
+game.tile[n] = new Object();
+game.tile[n].type = wall;
+game.tile[n].x = x;
+game.tile[n].y = y;
+game.tile[n].width = tilesize;
+game.tile[n].height = tilesize;
+var n=n+1;
+}
+var x=x+tilesize;
+var si=si+1;
+}
+var x=0;
+var y=y+tilesize;
+}
+game.player = new Object();
+game.player.x = 100;
+game.player.y = 100;
+game.player.width = 4;
+game.player.height = 4;
+game.player.dx = game.player.x+game.player.width/2;
+game.player.dy = game.player.y+game.player.height/2;
+game.player.speed = 2;
+game.player.tspeed = 0.04;
+game.player.angle = 0;
+game.player.rot = 0;
+game.player.length = 16;
+game.ray = new Array();
+for (var i=0; i<=viewwidth; i=i+1){
+game.ray[i] = new Object();
+game.ray[i].sx = 0;
+game.ray[i].sy = 0;
+game.ray[i].x = 0;
+game.ray[i].y = 0;
+game.ray[i].width = 1;
+game.ray[i].height = 1;
+game.ray[i].distance = 0;
+game.ray[i].cdistance = 0;
+game.ray[i].color = RGB(0,0,0);
+game.ray[i].odd = 0;
+}
+game.textures = new Object();
+game.textures.test = LOADIMAGE("aj.png");
+}
+function DRAW(){
+COLOR(game.colors.black);
+FILLRECT(0,0,800,screen_height);
+COLOR(game.colors.blue);
+for (var i=0; i<=ARRAYLEN(game.tile); i=i+1){
+FILLRECT(game.tile[i].x,game.tile[i].y,game.tile[i].width,game.tile[i].height);
+}
+STROKE(game.colors.green);
+LINE(game.player.x+game.player.width/2,game.player.y+game.player.height/2,game.player.dx,game.player.dy);
+COLOR(game.colors.green);
+FILLRECT(game.player.x,game.player.y,game.player.width,game.player.height);
+PROJECTSLICES();
+}
+function DRAWRAYS(){
+STROKE(game.colors.red);
+for (var i=0; i<=ARRAYLEN(game.ray); i=i+1){
+LINE(game.ray[i].sx,game.ray[i].sy,game.ray[i].x,game.ray[i].y);
+}
+}
+function PROJECTSLICES(){
+var x=10;
+var yoffset=350;
+var pp=300;
+var ppcenter=300/2;
+var distancetopp=128;
+var wallheight=192;
+var slicewidth=slwidth;
+for (var i=ARRAYLEN(game.ray); i>=0; i=i-1){
+var sliceheight=ROUND(wallheight/game.ray[i].cdistance*distancetopp);
+var y=(ppcenter-(sliceheight/2))+yoffset;
+if ( y<=yoffset){
+var y=yoffset;
+}
+if ( sliceheight>=pp){
+var sliceheight=pp;
+}
+COLOR(game.ray[i].color);
+FILLRECT(x,y,slicewidth,sliceheight);
+var x=x+slicewidth;
+}
+}
+function GAMELOOP(){
+PLAYERCONTROL();
+PLAYERCOLLISION();
+CALCLINE();
+CALCRAY();
+DRAW();
+}
+function PLAYERCONTROL(){
+if ( KEYSTATE(left)==1){
+game.player.angle = game.player.angle+game.player.tspeed;
+}
+if ( KEYSTATE(right)==1){
+game.player.angle = game.player.angle-game.player.tspeed;
+}
+if ( KEYSTATE(up)==1){
+game.player.y = game.player.y+COS(game.player.angle)*game.player.speed;
+game.player.x = game.player.x+SIN(game.player.angle)*game.player.speed;
+}
+if ( KEYSTATE(down)==1){
+game.player.y = game.player.y-COS(game.player.angle)*game.player.speed;
+game.player.x = game.player.x-SIN(game.player.angle)*game.player.speed;
+}
+}
+function CALCLINE(){
+var a=game.player.angle;
+var r=game.player.length;
+var cx=game.player.x+game.player.width/2;
+var cy=game.player.y+game.player.height/2;
+game.player.dx = cx+r*SIN(a);
+game.player.dy = cy+r*COS(a);
+}
+function CALCRAY(){
+var step=raystep;
+var a=game.player.angle-(viewwidth/2)*step;
+for (var l=0; l<=ARRAYLEN(game.ray); l=l+1){
+var a=a+step;
+var r=0;
+game.ray[l].sx = game.player.x+game.player.width/2;
+game.ray[l].sy = game.player.y+game.player.height/2;
+var f=0;
+while(1){
+if ( f==1){
+break;
+}
+game.ray[l].x = game.ray[l].sx+r*SIN(a);
+game.ray[l].y = game.ray[l].sy+r*COS(a);
+var r=r+1;
+for (var i=0; i<=ARRAYLEN(game.tile); i=i+1){
+if ( BOXCOLLISION(game.ray[l],game.tile[i])){
+var f=1;
+break;
+}
+}
+}
+game.ray[l].distance = r;
+game.ray[l].cdistance = r*COS(game.player.angle-a);
+var colornum=ROUND(game.ray[l].distance);
+var colornum=255-colornum;
+game.ray[l].color = RGB(colornum,0,0);
+}
+}
+function PLAYERCOLLISION(){
+for (var i=0; i<=ARRAYLEN(game.tile); i=i+1){
+if ( BOXCOLLISION(game.player,game.tile[i])){
+AUTOCOLLIDEADJUST(game.player,game.tile[i]);
+}
+}
+}
+function LOADLEVEL1(){
+var level = new Array();
+level[0] = "111111111111111111";
+level[1] = "100000000000000001";
+level[2] = "100001010100000001";
+level[3] = "10000000000000000111111111";
+level[4] = "10000000000000000000000001";
+level[5] = "10000111110000000111111101";
+level[6] = "10000100010000000100000101";
+level[7] = "10100000000011110111111101";
+level[8] = "10000000000000000000000001";
+level[9] = "11111111111111111111111111";
+return level;
+}
+
+</script>
+</html>

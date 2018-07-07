@@ -1,0 +1,7 @@
+﻿INCLUDE HELPER
+
+NEWCANVAS "view", 800, 600
+CALL SETCANVAS("view")
+
+aaa = CALL LOADIMAGE("image.png")
+CALL IMAGE(aaa, 100, 100)

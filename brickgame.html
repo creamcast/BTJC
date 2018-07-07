@@ -1,0 +1,254 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"><html lang="ja">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="GENERATOR" content="BASIC to JAVASCRIPT CONVERTOR">
+<title>My Page</title>
+<script type="text/javascript" src="lib/array.js"></script>
+<script type="text/javascript" src="lib/block.js"></script>
+<script type="text/javascript" src="lib/canvas.js"></script>
+<script type="text/javascript" src="lib/game.js"></script>
+<script type="text/javascript" src="lib/generic.js"></script>
+<script type="text/javascript" src="lib/io.js"></script>
+<script type="text/javascript" src="lib/math.js"></script>
+<script type="text/javascript" src="lib/network.js"></script>
+<script type="text/javascript" src="lib/string.js"></script>
+</head>
+<body bgcolor="#FFFFFF" text="#000000" link="#0000FF" alink="#FF0000" vlink="#800080" >
+<canvas id="view" width="800" height="700"></canvas><br>
+
+</body>
+<script>
+const screen_width=800;
+const screen_height=600;
+const left=37;
+const right=39;
+const up=38;
+const down=40;
+const start=83;
+SETCANVAS("view");
+BLOCKMOVE("view",WINDOWWIDTH()/2-screen_width/2);
+game = new Object();
+var ID_GAMELOOP=null;
+INITGAME();
+ID_GAMELOOP = setInterval(GAMELOOP,16);
+function GAMELOOP(){
+GAMECONTROL();
+BALL();
+PLAYERCONTROL();
+DRAW();
+}
+function GAMECONTROL(){
+if ( game.started==0){
+if ( KEYSTATE(start)==1){
+game.started = 1;
+}
+}
+if ( game.gameover==1){
+game.wait = game.wait+1;
+if ( game.wait>=100){
+RELOADPAGE();
+}
+}
+}
+function BALL(){
+if ( game.started==0){
+return 0;
+}
+for (var i=0; i<=ARRAYLEN(game.brick); i=i+1){
+if ( BOXCOLLISION(game.ball,game.brick[i])&&game.brick[i].dead==0){
+var side=AUTOCOLLIDEADJUST(game.ball,game.brick[i]);
+switch (side) {
+case 0:
+game.ball.hd = left;
+break;
+case 1:
+game.ball.hd = right;
+break;
+case 2:
+game.ball.vd = up;
+break;
+case 3:
+game.ball.vd = down;
+break;
+}
+game.brick[i].dead = 1;
+break;
+}
+}
+if ( BOXCOLLISION(game.ball,game.player)){
+AUTOCOLLIDEADJUST(game.ball,game.player);
+game.ball.vd = up;
+}
+for (var i=0; i<=ARRAYLEN(game.wall); i=i+1){
+if ( BOXCOLLISION(game.ball,game.wall[i])){
+AUTOCOLLIDEADJUST(game.ball,game.wall[i]);
+switch (i) {
+case 0:
+game.ball.hd = right;
+break;
+case 1:
+game.ball.hd = left;
+break;
+case 2:
+game.ball.vd = down;
+break;
+}
+break;
+}
+}
+if ( game.ball.hd==left){
+game.ball.x = game.ball.x-game.ball.speed;
+} else if ( game.ball.hd==right){
+game.ball.x = game.ball.x+game.ball.speed;
+}
+if ( game.ball.vd==up){
+game.ball.y = game.ball.y-game.ball.speed;
+} else if ( game.ball.vd==down){
+game.ball.y = game.ball.y+game.ball.speed;
+}
+if ( game.ball.y>screen_height){
+game.gameover = 1;
+}
+}
+function PLAYERCONTROL(){
+if ( game.started==0){
+return 0;
+}
+if ( KEYSTATE(left)==1){
+game.player.x = game.player.x-game.player.speed;
+}
+if ( KEYSTATE(right)==1){
+game.player.x = game.player.x+game.player.speed;
+}
+for (var i=0; i<=ARRAYLEN(game.wall)-1; i=i+1){
+if ( BOXCOLLISION(game.player,game.wall[i])){
+AUTOCOLLIDEADJUST(game.player,game.wall[i]);
+}
+}
+}
+function INITGAME(){
+INITKEYBOARD();
+game.started = 0;
+game.gameover = 0;
+game.wait = 0;
+game.player = new Object();
+game.player.x = screen_width/2;
+game.player.y = screen_height-64;
+game.player.width = 128;
+game.player.height = 32;
+game.player.speed = 6;
+game.ball = new Object();
+game.ball.x = screen_width/2;
+game.ball.y = screen_height/2;
+game.ball.width = 32;
+game.ball.height = 32;
+game.ball.speed = 4;
+game.ball.vd = down;
+game.wall = new Array();
+game.wall[0] = new Object();
+game.wall[0].x = 0;
+game.wall[0].y = 0;
+game.wall[0].width = 8;
+game.wall[0].height = screen_height;
+game.wall[1] = new Object();
+game.wall[1].x = screen_width-8;
+game.wall[1].y = 0;
+game.wall[1].width = 8;
+game.wall[1].height = screen_height;
+game.wall[2] = new Object();
+game.wall[2].x = 0;
+game.wall[2].y = 0;
+game.wall[2].width = screen_width;
+game.wall[2].height = 8;
+var direction=RND(1,0);
+if ( direction==0){
+game.ball.hd = left;
+}
+if ( direction==1){
+game.ball.hd = right;
+}
+game.brick = new Array();
+var level=LOADLEVEL();
+var x=8;
+var y=64;
+var b=0;
+for (var j=0; j<=ARRAYLEN(level); j=j+1){
+for (var i=1; i<=LEN(level[j]); i=i+1){
+if ( MID(level[j],i,1)=="b"){
+game.brick[b] = new Object();
+game.brick[b].x = x;
+game.brick[b].y = y;
+game.brick[b].width = 64;
+game.brick[b].height = 32;
+game.brick[b].dead = 0;
+var b=b+1;
+}
+var x=x+66;
+}
+var x=8;
+var y=y+34;
+}
+game.colors = new Object();
+game.colors.red = RGB(255,0,0);
+game.colors.green = RGB(0,255,0);
+game.colors.blue = RGB(0,0,255);
+game.colors.black = RGB(0,0,0);
+game.colors.white = RGB(255,255,255);
+game.colors.gray = RGB(194,194,194);
+}
+function DRAW(){
+COLOR(game.colors.black);
+CLEARRECT(0,0,screen_width,screen_height);
+FILLRECT(0,0,screen_width,screen_height);
+COLOR(game.colors.red);
+FILLRECT(game.player.x,game.player.y,game.player.width,game.player.height);
+COLOR(game.colors.white);
+FILLCIRCLE(game.ball.x+16,game.ball.y+16,game.ball.width/2);
+COLOR(game.colors.blue);
+for (var i=0; i<=ARRAYLEN(game.brick); i=i+1){
+if ( game.brick[i].dead==0){
+FILLRECT(game.brick[i].x,game.brick[i].y,game.brick[i].width,game.brick[i].height);
+}
+}
+COLOR(game.colors.gray);
+for (var i=0; i<=ARRAYLEN(game.wall); i=i+1){
+FILLRECT(game.wall[i].x,game.wall[i].y,game.wall[i].width,game.wall[i].height);
+}
+if ( game.started==0){
+DRAWTITLESCREEN();
+} else if ( game.gameover==1){
+DRAWGAMEOVERSCREEN();
+return 0;
+}
+}
+function PRINTCENTER(text,y){
+var width=TEXTWIDTH(text)/2;
+TEXT(screen_width/2-width,y,text);
+}
+function DRAWTITLESCREEN(){
+COLOR(game.colors.green);
+SETFONT(86,"BRITANNIC BOLD");
+PRINTCENTER("BRICKEDOUT",256);
+SETFONT(32,"BRITANNIC BOLD");
+PRINTCENTER("Created with BTJC",screen_height/2);
+SETFONT(16,"BRITANNIC BOLD");
+PRINTCENTER("Press 's' to Start",screen_height/2+34);
+}
+function DRAWGAMEOVERSCREEN(){
+COLOR(game.colors.green);
+SETFONT(86,"BRITANNIC BOLD");
+PRINTCENTER("GAME OVER",256);
+SETFONT(16,"BRITANNIC BOLD");
+PRINTCENTER("Reloading...",screen_height/2);
+}
+function LOADLEVEL(){
+var level = new Array();
+level[0] = "bbbbbbbbbbbb";
+level[1] = "bbbbbbbbbbbb";
+level[2] = "bbbbbbbbbbbb";
+level[3] = "bbbb0000bbbb";
+return level;
+}
+
+</script>
+</html>
