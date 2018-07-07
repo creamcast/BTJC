@@ -1,0 +1,776 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"><html lang="ja">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="GENERATOR" content="BASIC to JAVASCRIPT CONVERTOR">
+<title>My Page</title>
+<script type="text/javascript" src="lib/array.js"></script>
+<script type="text/javascript" src="lib/block.js"></script>
+<script type="text/javascript" src="lib/canvas.js"></script>
+<script type="text/javascript" src="lib/game.js"></script>
+<script type="text/javascript" src="lib/generic.js"></script>
+<script type="text/javascript" src="lib/io.js"></script>
+<script type="text/javascript" src="lib/math.js"></script>
+<script type="text/javascript" src="lib/network.js"></script>
+<script type="text/javascript" src="lib/string.js"></script>
+</head>
+<body bgcolor="#FFFFFF" text="#000000" link="#0000FF" alink="#FF0000" vlink="#800080" >
+<canvas id="canvassample" width="800" height="600"></canvas><br>
+<BUTTON onclick="INIT()">PLAY</BUTTON><br>
+<div id="main"></div>
+
+</body>
+<script>
+global_cdiv = "main"
+ID_DRAW=null;
+function INIT(){
+SETCANVAS("canvassample");
+document.getElementById(global_cdiv).innerHTML="";
+STOPWCALL(ID_DRAW);
+INITKEYBOARD();
+var game = new Object();
+game.player = new Object();
+game.camcenter = new Object();
+game.screenedge = new Object();
+game.camcenter.x = 800/2;
+game.camcenter.y = 0;
+game.camcenter.width = 800/2;
+game.camcenter.height = 600;
+game.screenedge.x = 0-64;
+game.screenedge.y = 0;
+game.screenedge.width = 64;
+game.screenedge.height = 600;
+game.player.x = 0;
+game.player.y = 0;
+game.player.height = 64;
+game.player.width = 32;
+game.player.spritesheet = LOADIMAGE("player1.png");
+game.player.spritesize = 64;
+game.player.row = game.player.spritesize*4;
+game.player.col = game.player.spritesize*0;
+game.player.frame = 1;
+game.player.cycletime = 0;
+game.player.jumping = 0;
+game.player.falling = 1;
+game.player.jumptime = 0;
+game.player.direction = 0;
+game.player.onground = 0;
+game.player.speed = 0;
+game.player.jumpspeed = 0;
+game.player.fallspeed = 0;
+game.player.firing = 0;
+game.player.dead = 0;
+game.coinimg = LOADIMAGE("coin.png");
+LOADLEVEL1(game);
+game.enemyimg = LOADIMAGE("poisonm.png");
+game.ballimg = LOADIMAGE("ball.png");
+game.spawntime = 0;
+game.enemy = new Array();
+game.enemy[0] = new Object();
+game.enemy[0].x = 0;
+game.enemy[0].y = -50;
+game.enemy[0].width = 32;
+game.enemy[0].height = 32;
+game.enemy[0].spawned = 0;
+game.enemy[0].dead = 0;
+game.enemy[0].direction = 0;
+game.enemy[1] = new Object();
+game.enemy[1].x = 0;
+game.enemy[1].x = -50;
+game.enemy[1].width = 64;
+game.enemy[1].height = 64;
+game.enemy[1].spawned = 0;
+game.scenex = 0;
+game.sceney = 0;
+game.firesound = LOADSOUND("line.wav");
+game.jumpsound = LOADSOUND("jump.wav");
+game.hitsound = LOADSOUND("hit.wav");
+game.coinsound = LOADSOUND("coin.wav");
+var time = new Date();
+var timep=time.getTime()+10;
+MAINLOOP(game,timep);
+}
+function LEFTTOUCH(){
+var n=touchinfo.total;
+if ( n==0){
+return false;
+}
+if ( n==undefined){
+return false;
+}
+if ( touchinfo.touches[1].pageX<100){
+return true;
+}
+return false;
+}
+function RIGHTTOUCH(){
+var n=touchinfo.total;
+if ( n==0){
+return false;
+}
+if ( n==undefined){
+return false;
+}
+if ( touchinfo.touches[1].pageX>100&&touchinfo.touches[1].pageX<600){
+return true;
+}
+return false;
+}
+function JUMPTOUCH(){
+var n=touchinfo.total;
+if ( n==0){
+return false;
+}
+if ( n==undefined){
+return false;
+}
+if ( touchinfo.touches[2].pageX>700){
+return true;
+}
+if ( touchinfo.touches[1].pageX>700){
+return true;
+}
+return false;
+}
+function MAINLOOP(game,timep){
+var moved=0;
+if ( (KEYSTATE(37)==1&&game.player.dead==0)||(LEFTTOUCH()==true&&game.player.dead==0)){
+game.player.x = game.player.x-game.player.speed;
+game.player.direction = 1;
+var moved=1;
+}
+if ( (KEYSTATE(39)==1&&game.player.dead==0)||(RIGHTTOUCH()==true&&game.player.dead==0)){
+game.player.x = game.player.x+game.player.speed;
+game.player.direction = 0;
+var moved=2;
+}
+if ( moved!=0){
+game.player.speed = game.player.speed+0.05;
+if ( game.player.speed>4){
+game.player.speed = 4;
+}
+} else {
+game.player.speed = game.player.speed-0.1;
+if ( game.player.speed<=0){
+game.player.speed = 0;
+}
+if ( game.player.direction==1){
+game.player.x = game.player.x-game.player.speed;
+}
+if ( game.player.direction==0){
+game.player.x = game.player.x+game.player.speed;
+}
+}
+if ( KEYSTATE(88)==1&&game.player.firing==0){
+PLAYSOUND(game.firesound);
+game.player.firing = 1;
+game.player.frame = 4;
+game.player.cycletime = 0;
+}
+if ( (KEYSTATE(38)==1&&game.player.jumping==0&&game.player.falling==0&&game.player.onground==1&&game.player.dead==0)||(JUMPTOUCH()==true&&game.player.jumping==0&&game.player.falling==0&&game.player.onground==1&&game.player.dead==0)){
+game.player.jumping = 1;
+game.player.jumpspeed = 6;
+game.player.cycletime = 0;
+game.player.frame = 0;
+game.player.fallspeed = 0;
+PLAYSOUND(game.jumpsound);
+}
+if ( game.player.jumping==1){
+game.player.y = game.player.y-game.player.jumpspeed;
+game.player.jumptime = game.player.jumptime+1;
+game.player.jumpspeed = game.player.jumpspeed-0.1;
+if ( game.player.jumpspeed<0){
+game.player.jumpspeed = 0;
+}
+if ( game.player.jumptime>50){
+game.player.falling = 1;
+game.player.jumping = 0;
+game.player.jumptime = 0;
+}
+}
+if ( game.player.jumping==0){
+game.player.y = game.player.y+game.player.fallspeed;
+game.player.fallspeed = game.player.fallspeed+0.4;
+if ( game.player.fallspeed>6){
+game.player.fallspeed = 6;
+}
+}
+if ( game.player.firing==1){
+if ( game.player.frame==0){
+game.player.firing = 0;
+}
+}
+if ( game.player.dead==1){
+SETSPRITEROW(game,2);
+if ( game.player.frame==6){
+game.player.frame = 6;
+game.player.cycletime = 0;
+}
+} else if ( game.player.firing==1){
+SETSPRITEROW(game,1);
+} else if ( game.player.falling==1&&game.player.direction==0){
+SETSPRITEROW(game,5);
+game.player.cycletime = 0;
+game.player.frame = 6;
+} else if ( game.player.falling==1&&game.player.direction==1){
+SETSPRITEROW(game,6);
+game.player.cycletime = 0;
+game.player.frame = 6;
+} else if ( game.player.jumping==1&&game.player.direction==0){
+SETSPRITEROW(game,5);
+if ( game.player.frame==6){
+game.player.cycletime = 5;
+}
+} else if ( game.player.jumping==1&&game.player.direction==1){
+SETSPRITEROW(game,6);
+if ( game.player.frame==6){
+game.player.cycletime = 5;
+}
+} else if ( moved==1){
+SETSPRITEROW(game,9);
+} else if ( moved==2){
+SETSPRITEROW(game,4);
+} else if ( game.player.direction==0){
+SETSPRITEROW(game,8);
+game.player.cycletime = 0;
+game.player.frame = 0;
+} else if ( game.player.direction==1){
+SETSPRITEROW(game,8);
+game.player.cycletime = 0;
+game.player.frame = 1;
+}
+if ( game.scenex<-100&&game.enemy[0].spawned==0){
+game.enemy[0].spawned = 1;
+game.enemy[0].x = (-1*game.scenex)+800;
+game.enemy[0].y = RND(500,100);
+}
+if ( game.spawntime>=150&&game.enemy[1].spawned==0){
+if ( RND(2,1)==2){
+PLAYSOUND(game.firesound);
+game.enemy[1].spawned = 1;
+game.enemy[1].x = (-1*game.scenex)+800;
+game.enemy[1].y = game.player.y;
+}
+game.spawntime = 0;
+} else {
+game.spawntime = game.spawntime+1;
+}
+if ( game.enemy[1].spawned==1){
+game.enemy[1].x = game.enemy[1].x-6;
+if ( BOXCOLLISION(game.enemy[1],game.screenedge)==true){
+game.enemy[1].spawned = 0;
+}
+if ( BOXCOLLISION(game.enemy[1],game.player)==true&&game.player.dead==0){
+game.player.dead = 1;
+game.player.frame = 0;
+PLAYSOUND(game.hitsound);
+document.getElementById(global_cdiv).innerHTML+="YOU DIED!"+"<br>";
+}
+}
+if ( game.enemy[0].spawned==1){
+if ( game.enemy[0].direction==0){
+game.enemy[0].x = game.enemy[0].x-4;
+}
+if ( game.enemy[0].direction==1){
+game.enemy[0].x = game.enemy[0].x+4;
+}
+game.enemy[0].y = game.enemy[0].y+4;
+var len=ARRAYLEN(game.obstacle);
+for (var i=0; i<=len; i=i+1){
+if ( BOXCOLLISION(game.enemy[0],game.obstacle[i])==true){
+var e=AUTOCOLLIDEADJUST(game.enemy[0],game.obstacle[i]);
+if ( e==1){
+game.enemy[0].direction = 1;
+}
+if ( e==0){
+game.enemy[0].direction = 0;
+}
+}
+}
+if ( BOXCOLLISION(game.enemy[0],game.player)==true&&game.player.dead==0){
+game.player.dead = 1;
+game.player.frame = 0;
+PLAYSOUND(game.hitsound);
+document.getElementById(global_cdiv).innerHTML+="YOU DIED!"+"<br>";
+}
+if ( game.player.x-game.enemy[0].x>500){
+game.enemy[0].spawned = 0;
+}
+if ( game.enemy[0].y>800){
+game.enemy[0].spawned = 0;
+}
+}
+var len=ARRAYLEN(game.obstacle);
+for (var i=0; i<=len; i=i+1){
+if ( INDISTANCE(game,i)==true){
+if ( BOXCOLLISION(game.player,game.obstacle[i])==true){
+var where=AUTOCOLLIDEADJUST(game.player,game.obstacle[i]);
+if ( where==2){
+game.player.falling = 0;
+game.player.onground = 1;
+} else if ( where==3){
+game.player.jumptime = 90;
+game.player.jumpspeed = 0;
+} else {
+game.player.onground = 0;
+}
+}
+}
+}
+var len=ARRAYLEN(game.coin);
+for (var i=0; i<=len; i=i+1){
+if ( BOXCOLLISION(game.player,game.coin[i])==true&&game.coin[i].color!=""){
+game.coin[i].color = "";
+PLAYSOUND(game.coinsound);
+}
+}
+if ( BOXCOLLISION(game.player,game.camcenter)==true){
+game.scenex = game.scenex-game.player.speed;
+game.camcenter.x = game.camcenter.x+game.player.speed;
+game.screenedge.x = game.screenedge.x+game.player.speed;
+}
+if ( BOXCOLLISION(game.player,game.screenedge)==true){
+AUTOCOLLIDEADJUST(game.player,game.screenedge);
+}
+var time = new Date();
+if ( time.getTime()>timep){
+CYCLEFRAME(game);
+DRAW(game);
+var timep=time.getTime()+10;
+}
+ID_DRAW = setTimeout(function(){MAINLOOP(game,timep)},16);
+}
+function DRAW(game){
+var red=RGB(255,0,0);
+var green=RGB(0,255,0);
+var black=RGB(0,0,0);
+var skyblue=RGB(135,206,250);
+CLEARRECT(0,0,800,600);
+COLOR(skyblue);
+FILLRECT(0,0,800,600);
+COLOR(green);
+SLICEDIMAGE(game.player.spritesheet,GETWHICHSPRITE(game),game.player.row,64,64,game.player.x-16+game.scenex,game.player.y,64,64);
+if ( game.enemy[0].spawned==1){
+IMAGE(game.enemyimg,game.enemy[0].x+game.scenex,game.enemy[0].y,32,32);
+}
+var len=ARRAYLEN(game.obstacle);
+for (var i=0; i<=len; i=i+1){
+if ( INDISTANCE(game,i)==true){
+COLOR(game.obstacle[i].color);
+FILLRECT(game.obstacle[i].x+game.scenex,game.obstacle[i].y,game.obstacle[i].width,game.obstacle[i].height);
+}
+}
+COLOR("#FFFF00");
+var len=ARRAYLEN(game.coin);
+for (var i=0; i<=len; i=i+1){
+if ( game.coin[i].color!=""){
+IMAGE(game.coinimg,game.coin[i].x+game.scenex,game.coin[i].y,32,32);
+}
+}
+if ( game.enemy[1].spawned==1){
+IMAGE(game.ballimg,game.enemy[1].x+game.scenex,game.enemy[1].y,game.enemy[1].width,game.enemy[1].height);
+}
+}
+function CYCLEFRAME(game){
+var cframe=game.player.frame;
+if ( game.player.cycletime>5){
+var cframe=cframe+1;
+game.player.cycletime = 0;
+} else {
+game.player.cycletime = game.player.cycletime+1;
+}
+if ( cframe>=7){
+var cframe=0;
+}
+game.player.frame = cframe;
+}
+function SETSPRITEROW(game,row){
+game.player.row = game.player.spritesize*row;
+}
+function GETWHICHSPRITE(game){
+return game.player.spritesize*game.player.frame;
+}
+function INDISTANCE(game,i){
+if ( (game.obstacle[i].x-game.player.x<800&&game.player.x-game.obstacle[i].x<800)||LEFT(game.obstacle[i].name,6)=="ground"){
+return true;
+} else {
+return false;
+}
+}
+function LOADLEVEL1(game){
+game.coin = new Array();
+game.coin[0] = new Object();
+game.coin[0].x = 5337;
+game.coin[0].y = 80;
+game.coin[0].width = 32;
+game.coin[0].height = 32;
+game.coin[0].color = "#000000";
+game.coin[0].name = "coin10";
+game.coin[1] = new Object();
+game.coin[1].x = 6080;
+game.coin[1].y = 60;
+game.coin[1].width = 32;
+game.coin[1].height = 32;
+game.coin[1].color = "#000000";
+game.coin[1].name = "coin11";
+game.coin[2] = new Object();
+game.coin[2].x = 9186;
+game.coin[2].y = 140;
+game.coin[2].width = 32;
+game.coin[2].height = 32;
+game.coin[2].color = "#000000";
+game.coin[2].name = "coin13";
+game.coin[3] = new Object();
+game.coin[3].x = 7786;
+game.coin[3].y = 19;
+game.coin[3].width = 32;
+game.coin[3].height = 32;
+game.coin[3].color = "#000000";
+game.coin[3].name = "coin14";
+game.coin[4] = new Object();
+game.coin[4].x = 6886;
+game.coin[4].y = 240;
+game.coin[4].width = 32;
+game.coin[4].height = 32;
+game.coin[4].color = "#000000";
+game.coin[4].name = "coin15";
+game.coin[5] = new Object();
+game.coin[5].x = 400;
+game.coin[5].y = 220;
+game.coin[5].width = 32;
+game.coin[5].height = 32;
+game.coin[5].color = "#000000";
+game.coin[5].name = "coin1";
+game.coin[6] = new Object();
+game.coin[6].x = 677;
+game.coin[6].y = 80;
+game.coin[6].width = 32;
+game.coin[6].height = 32;
+game.coin[6].color = "#000000";
+game.coin[6].name = "coin2";
+game.coin[7] = new Object();
+game.coin[7].x = 1348;
+game.coin[7].y = 220;
+game.coin[7].width = 32;
+game.coin[7].height = 32;
+game.coin[7].color = "#000000";
+game.coin[7].name = "coin4";
+game.coin[8] = new Object();
+game.coin[8].x = 2977;
+game.coin[8].y = 280;
+game.coin[8].width = 32;
+game.coin[8].height = 32;
+game.coin[8].color = "#000000";
+game.coin[8].name = "coin5";
+game.coin[9] = new Object();
+game.coin[9].x = 4317;
+game.coin[9].y = 240;
+game.coin[9].width = 32;
+game.coin[9].height = 32;
+game.coin[9].color = "#000000";
+game.coin[9].name = "coin6";
+game.coin[10] = new Object();
+game.coin[10].x = 3317;
+game.coin[10].y = 280;
+game.coin[10].width = 32;
+game.coin[10].height = 32;
+game.coin[10].color = "#000000";
+game.coin[10].name = "coin7";
+game.coin[11] = new Object();
+game.coin[11].x = 3797;
+game.coin[11].y = 200;
+game.coin[11].width = 32;
+game.coin[11].height = 32;
+game.coin[11].color = "#000000";
+game.coin[11].name = "coin8";
+game.coin[12] = new Object();
+game.coin[12].x = 4497;
+game.coin[12].y = 207;
+game.coin[12].width = 32;
+game.coin[12].height = 32;
+game.coin[12].color = "#000000";
+game.coin[12].name = "coin9";
+game.obstacle = new Array();
+game.obstacle[0] = new Object();
+game.obstacle[0].x = 10486;
+game.obstacle[0].y = 272;
+game.obstacle[0].width = 128;
+game.obstacle[0].height = 128;
+game.obstacle[0].color = "#8000FF";
+game.obstacle[0].name = "goal";
+game.obstacle[1] = new Object();
+game.obstacle[1].x = 9926;
+game.obstacle[1].y = 272;
+game.obstacle[1].width = 128;
+game.obstacle[1].height = 128;
+game.obstacle[1].color = "#008000";
+game.obstacle[1].name = "pipe2";
+game.obstacle[2] = new Object();
+game.obstacle[2].x = 6657;
+game.obstacle[2].y = 340;
+game.obstacle[2].width = 64;
+game.obstacle[2].height = 64;
+game.obstacle[2].color = "#804040";
+game.obstacle[2].name = "stair1";
+game.obstacle[3] = new Object();
+game.obstacle[3].x = 6717;
+game.obstacle[3].y = 280;
+game.obstacle[3].width = 64;
+game.obstacle[3].height = 128;
+game.obstacle[3].color = "#804040";
+game.obstacle[3].name = "stair2";
+game.obstacle[4] = new Object();
+game.obstacle[4].x = 6777;
+game.obstacle[4].y = 220;
+game.obstacle[4].width = 64;
+game.obstacle[4].height = 192;
+game.obstacle[4].color = "#804040";
+game.obstacle[4].name = "stair3";
+game.obstacle[5] = new Object();
+game.obstacle[5].x = 6957;
+game.obstacle[5].y = 220;
+game.obstacle[5].width = 64;
+game.obstacle[5].height = 192;
+game.obstacle[5].color = "#804040";
+game.obstacle[5].name = "stair4";
+game.obstacle[6] = new Object();
+game.obstacle[6].x = 7017;
+game.obstacle[6].y = 280;
+game.obstacle[6].width = 64;
+game.obstacle[6].height = 128;
+game.obstacle[6].color = "#804040";
+game.obstacle[6].name = "stair5";
+game.obstacle[7] = new Object();
+game.obstacle[7].x = 7077;
+game.obstacle[7].y = 340;
+game.obstacle[7].width = 64;
+game.obstacle[7].height = 64;
+game.obstacle[7].color = "#804040";
+game.obstacle[7].name = "stair6";
+game.obstacle[8] = new Object();
+game.obstacle[8].x = 5320;
+game.obstacle[8].y = 260;
+game.obstacle[8].width = 64;
+game.obstacle[8].height = 32;
+game.obstacle[8].color = "#804040";
+game.obstacle[8].name = "block10";
+game.obstacle[9] = new Object();
+game.obstacle[9].x = 5460;
+game.obstacle[9].y = 260;
+game.obstacle[9].width = 64;
+game.obstacle[9].height = 32;
+game.obstacle[9].color = "#804040";
+game.obstacle[9].name = "block11";
+game.obstacle[10] = new Object();
+game.obstacle[10].x = 5320;
+game.obstacle[10].y = 120;
+game.obstacle[10].width = 64;
+game.obstacle[10].height = 32;
+game.obstacle[10].color = "#804040";
+game.obstacle[10].name = "block12";
+game.obstacle[11] = new Object();
+game.obstacle[11].x = 5837;
+game.obstacle[11].y = 260;
+game.obstacle[11].width = 64;
+game.obstacle[11].height = 32;
+game.obstacle[11].color = "#804040";
+game.obstacle[11].name = "block13";
+game.obstacle[12] = new Object();
+game.obstacle[12].x = 6197;
+game.obstacle[12].y = 260;
+game.obstacle[12].width = 128;
+game.obstacle[12].height = 32;
+game.obstacle[12].color = "#804040";
+game.obstacle[12].name = "block14";
+game.obstacle[13] = new Object();
+game.obstacle[13].x = 6077;
+game.obstacle[13].y = 100;
+game.obstacle[13].width = 256;
+game.obstacle[13].height = 32;
+game.obstacle[13].color = "#804040";
+game.obstacle[13].name = "block15";
+game.obstacle[14] = new Object();
+game.obstacle[14].x = 7978;
+game.obstacle[14].y = 144;
+game.obstacle[14].width = 64;
+game.obstacle[14].height = 256;
+game.obstacle[14].color = "#804040";
+game.obstacle[14].name = "stair3-1";
+game.obstacle[15] = new Object();
+game.obstacle[15].x = 8040;
+game.obstacle[15].y = 208;
+game.obstacle[15].width = 64;
+game.obstacle[15].height = 192;
+game.obstacle[15].color = "#804040";
+game.obstacle[15].name = "stair3-2";
+game.obstacle[16] = new Object();
+game.obstacle[16].x = 8100;
+game.obstacle[16].y = 280;
+game.obstacle[16].width = 64;
+game.obstacle[16].height = 128;
+game.obstacle[16].color = "#804040";
+game.obstacle[16].name = "stair3-3";
+game.obstacle[17] = new Object();
+game.obstacle[17].x = 8161;
+game.obstacle[17].y = 336;
+game.obstacle[17].width = 64;
+game.obstacle[17].height = 64;
+game.obstacle[17].color = "#804040";
+game.obstacle[17].name = "stair3-4";
+game.obstacle[18] = new Object();
+game.obstacle[18].x = 380;
+game.obstacle[18].y = 258;
+game.obstacle[18].width = 64;
+game.obstacle[18].height = 32;
+game.obstacle[18].color = "#804040";
+game.obstacle[18].name = "block1";
+game.obstacle[19] = new Object();
+game.obstacle[19].x = 524;
+game.obstacle[19].y = 258;
+game.obstacle[19].width = 320;
+game.obstacle[19].height = 32;
+game.obstacle[19].color = "#804040";
+game.obstacle[19].name = "block2";
+game.obstacle[20] = new Object();
+game.obstacle[20].x = 660;
+game.obstacle[20].y = 120;
+game.obstacle[20].width = 64;
+game.obstacle[20].height = 32;
+game.obstacle[20].color = "#804040";
+game.obstacle[20].name = "block3";
+game.obstacle[21] = new Object();
+game.obstacle[21].x = 3711;
+game.obstacle[21].y = 240;
+game.obstacle[21].width = 192;
+game.obstacle[21].height = 32;
+game.obstacle[21].color = "#804040";
+game.obstacle[21].name = "block4";
+game.obstacle[22] = new Object();
+game.obstacle[22].x = 3911;
+game.obstacle[22].y = 120;
+game.obstacle[22].width = 256;
+game.obstacle[22].height = 32;
+game.obstacle[22].color = "#804040";
+game.obstacle[22].name = "block5";
+game.obstacle[23] = new Object();
+game.obstacle[23].x = 4420;
+game.obstacle[23].y = 120;
+game.obstacle[23].width = 128;
+game.obstacle[23].height = 32;
+game.obstacle[23].color = "#804040";
+game.obstacle[23].name = "block6";
+game.obstacle[24] = new Object();
+game.obstacle[24].x = 4484;
+game.obstacle[24].y = 250;
+game.obstacle[24].width = 64;
+game.obstacle[24].height = 32;
+game.obstacle[24].color = "#804040";
+game.obstacle[24].name = "block7";
+game.obstacle[25] = new Object();
+game.obstacle[25].x = 4844;
+game.obstacle[25].y = 260;
+game.obstacle[25].width = 128;
+game.obstacle[25].height = 32;
+game.obstacle[25].color = "#804040";
+game.obstacle[25].name = "block8";
+game.obstacle[26] = new Object();
+game.obstacle[26].x = 5180;
+game.obstacle[26].y = 260;
+game.obstacle[26].width = 64;
+game.obstacle[26].height = 32;
+game.obstacle[26].color = "#804040";
+game.obstacle[26].name = "block9";
+game.obstacle[27] = new Object();
+game.obstacle[27].x = 3551;
+game.obstacle[27].y = 400;
+game.obstacle[27].width = 500;
+game.obstacle[27].height = 200;
+game.obstacle[27].color = "#800000";
+game.obstacle[27].name = "ground2";
+game.obstacle[28] = new Object();
+game.obstacle[28].x = 4431;
+game.obstacle[28].y = 400;
+game.obstacle[28].width = 3225;
+game.obstacle[28].height = 200;
+game.obstacle[28].color = "#800000";
+game.obstacle[28].name = "ground3";
+game.obstacle[29] = new Object();
+game.obstacle[29].x = 7978;
+game.obstacle[29].y = 400;
+game.obstacle[29].width = 2800;
+game.obstacle[29].height = 200;
+game.obstacle[29].color = "#800000";
+game.obstacle[29].name = "ground4";
+game.obstacle[30] = new Object();
+game.obstacle[30].x = 0;
+game.obstacle[30].y = 399;
+game.obstacle[30].width = 3200;
+game.obstacle[30].height = 200;
+game.obstacle[30].color = "#800000";
+game.obstacle[30].name = "ground";
+game.obstacle[31] = new Object();
+game.obstacle[31].x = 7402;
+game.obstacle[31].y = 336;
+game.obstacle[31].width = 64;
+game.obstacle[31].height = 64;
+game.obstacle[31].color = "#804040";
+game.obstacle[31].name = "stair2-1";
+game.obstacle[32] = new Object();
+game.obstacle[32].x = 7465;
+game.obstacle[32].y = 272;
+game.obstacle[32].width = 64;
+game.obstacle[32].height = 128;
+game.obstacle[32].color = "#804040";
+game.obstacle[32].name = "stair2-2";
+game.obstacle[33] = new Object();
+game.obstacle[33].x = 7529;
+game.obstacle[33].y = 208;
+game.obstacle[33].width = 64;
+game.obstacle[33].height = 192;
+game.obstacle[33].color = "#804040";
+game.obstacle[33].name = "stair2-3";
+game.obstacle[34] = new Object();
+game.obstacle[34].x = 7592;
+game.obstacle[34].y = 144;
+game.obstacle[34].width = 64;
+game.obstacle[34].height = 256;
+game.obstacle[34].color = "#804040";
+game.obstacle[34].name = "stair2-4";
+game.obstacle[35] = new Object();
+game.obstacle[35].x = 9026;
+game.obstacle[35].y = 200;
+game.obstacle[35].width = 256;
+game.obstacle[35].height = 32;
+game.obstacle[35].color = "#804040";
+game.obstacle[35].name = "blockair";
+game.obstacle[36] = new Object();
+game.obstacle[36].x = 8626;
+game.obstacle[36].y = 272;
+game.obstacle[36].width = 128;
+game.obstacle[36].height = 128;
+game.obstacle[36].color = "#008000";
+game.obstacle[36].name = "pipe";
+game.obstacle[37] = new Object();
+game.obstacle[37].x = 1300;
+game.obstacle[37].y = 271;
+game.obstacle[37].width = 128;
+game.obstacle[37].height = 128;
+game.obstacle[37].color = "#004000";
+game.obstacle[37].name = "largeobstacle1";
+game.obstacle[38] = new Object();
+game.obstacle[38].x = 2000;
+game.obstacle[38].y = 261;
+game.obstacle[38].width = 128;
+game.obstacle[38].height = 138;
+game.obstacle[38].color = "#004000";
+game.obstacle[38].name = "largeobstacle2";
+game.obstacle[39] = new Object();
+game.obstacle[39].x = 2692;
+game.obstacle[39].y = 261;
+game.obstacle[39].width = 128;
+game.obstacle[39].height = 138;
+game.obstacle[39].color = "#004000";
+game.obstacle[39].name = "largeobstacle3";
+}
+
+</script>
+</html>
